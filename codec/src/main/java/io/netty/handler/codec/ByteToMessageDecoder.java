@@ -86,23 +86,23 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 return in;
             }
             try {
-                final int required = in.readableBytes();
+                final int required = in.readableBytes();//可读数据大小
                 if (required > cumulation.maxWritableBytes() ||
                     required > cumulation.maxFastWritableBytes() && cumulation.refCnt() > 1 ||
-                    cumulation.isReadOnly()) {
+                    cumulation.isReadOnly()) {//不允许扩大 超过  cumulation 最大 可多bytes 2, share refCount> 1 readonly
                     // Expand cumulation (by replacing it) under the following conditions:
                     // - cumulation cannot be resized to accommodate the additional data
                     // - cumulation can be expanded with a reallocation operation to accommodate but the buffer is
                     //   assumed to be shared (e.g. refCnt() > 1) and the reallocation may not be safe.
                     return expandCumulation(alloc, cumulation, in);
                 }
-                cumulation.writeBytes(in, in.readerIndex(), required);
-                in.readerIndex(in.writerIndex());
+                cumulation.writeBytes(in, in.readerIndex(), required);//将in的数据从reader index write to cumulation
+                in.readerIndex(in.writerIndex());//将buffer index 设置到写的位置
                 return cumulation;
             } finally {
                 // We must release in all cases as otherwise it may produce a leak if writeBytes(...) throw
                 // for whatever release (for example because of OutOfMemoryError)
-                in.release();
+                in.release();//释放资源
             }
         }
     };
@@ -154,7 +154,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
-    private boolean first;
+    private boolean first;//weather first
 
     /**
      * This flag is used to determine if we need to call {@link ChannelHandlerContext#read()} to consume more data
@@ -269,40 +269,41 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof ByteBuf) {
+        if (msg instanceof ByteBuf) {//数据类型进行判断
             selfFiredChannelRead = true;
-            CodecOutputList out = CodecOutputList.newInstance();
+            CodecOutputList out = CodecOutputList.newInstance();//存储解码出来的消息(内部数据结构为true)
             try {
-                first = cumulation == null;
+                first = cumulation == null;//运用缓冲接收器来判断是否是第一次接收消息
                 cumulation = cumulator.cumulate(ctx.alloc(),
-                        first ? Unpooled.EMPTY_BUFFER : cumulation, (ByteBuf) msg);
-                callDecode(ctx, cumulation, out);
+                        first ? Unpooled.EMPTY_BUFFER : cumulation, (ByteBuf) msg);//合并数据
+                // 将 in from readerIndex read writeable size to comulation 并release old buffer
+                callDecode(ctx, cumulation, out);//对积累缓冲区的数据进行编码 将结果放在out(list)里面
             } catch (DecoderException e) {
                 throw e;
             } catch (Exception e) {
                 throw new DecoderException(e);
             } finally {
                 try {
-                    if (cumulation != null && !cumulation.isReadable()) {
+                    if (cumulation != null && !cumulation.isReadable()) {//重置cumulation numReads
                         numReads = 0;
                         cumulation.release();
                         cumulation = null;
-                    } else if (++numReads >= discardAfterReads) {
+                    } else if (++numReads >= discardAfterReads) {//避免 oome overflowr memort 多次解码都没有对数据进行全部的处理 可能内存会无限制的增长
                         // We did enough reads already try to discard some bytes, so we not risk to see a OOME.
                         // See https://github.com/netty/netty/issues/4275
                         numReads = 0;
-                        discardSomeReadBytes();
+                        discardSomeReadBytes();//丢弃一些数据
                     }
 
                     int size = out.size();
                     firedChannelRead |= out.insertSinceRecycled();
-                    fireChannelRead(ctx, out, size);
+                    fireChannelRead(ctx, out, size);//将后续的操作交给事件链下一个Inbounyt channelread()去操作
                 } finally {
-                    out.recycle();
+                    out.recycle();//对list进行回收
                 }
             }
         } else {
-            ctx.fireChannelRead(msg);
+            ctx.fireChannelRead(msg);//数据类型不合适 执行下传入下一个inbount 进行处理
         }
     }
 
@@ -423,7 +424,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * {@link #decode(ChannelHandlerContext, ByteBuf, List)} as long as decoding should take place.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
-     * @param in            the {@link ByteBuf} from which to read data
+     * @param in            the {@link ByteBuf} from which to read data comulation byte
      * @param out           the {@link List} to which decoded messages should be added
      */
     protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
