@@ -104,14 +104,14 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
      */
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        if (ctx.channel().isRegistered()) {
+        if (ctx.channel().isRegistered()) {//检查通道是否被注册(是否被注册到Selector选择器里面)
             // This should always be true with our current DefaultChannelPipeline implementation.
             // The good thing about calling initChannel(...) in handlerAdded(...) is that there will be no ordering
             // surprises if a ChannelInitializer will add another ChannelInitializer. This is as all handlers
             // will be added in the expected order.
-            if (initChannel(ctx)) {
+            if (initChannel(ctx)) {//支持幂等 只保证initChannel 被调用一次
 
-                // We are done with init the Channel, removing the initializer now.
+                // We are done with init the Channel, removing the initializer now.调用
                 removeState(ctx);
             }
         }
@@ -124,7 +124,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
 
     @SuppressWarnings("unchecked")
     private boolean initChannel(ChannelHandlerContext ctx) throws Exception {
-        if (initMap.add(ctx)) { // Guard against re-entrance.
+        if (initMap.add(ctx)) { // Guard against re-entrance. 防止在一次重复景进入
             try {
                 initChannel((C) ctx.channel());
             } catch (Throwable cause) {

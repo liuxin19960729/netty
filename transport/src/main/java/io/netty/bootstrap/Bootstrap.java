@@ -169,7 +169,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
                     // Directly obtain the cause and do a null check so we only need one volatile read in case of a
                     // failure.
                     Throwable cause = future.cause();
-                    if (cause != null) {
+                    if (cause != null) {//检查在进行连接之前是否出现前面的操作异常(造成注册失败)
                         // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
                         // IllegalStateException once we try to access the EventLoop of the Channel.
                         promise.setFailure(cause);
@@ -259,10 +259,10 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     @Override
     void init(Channel channel) {
         ChannelPipeline p = channel.pipeline();
-        p.addLast(config.handler());
+        p.addLast(config.handler());//1将用户定义的handler加入到处理链
 
-        setChannelOptions(channel, newOptionsArray(), logger);
-        setAttributes(channel, newAttributesArray());
+        setChannelOptions(channel, newOptionsArray(), logger);//设置网络选项
+        setAttributes(channel, newAttributesArray());//设置属性
     }
 
     @Override

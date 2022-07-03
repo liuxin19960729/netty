@@ -1392,7 +1392,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 destroy();
             }
         }
-
+        //激活时间处理 并且主持OP_READ 时间到selector 上面
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
             ctx.fireChannelActive();

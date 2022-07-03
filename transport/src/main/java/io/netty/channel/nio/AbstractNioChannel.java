@@ -244,15 +244,15 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     throw new ConnectionPendingException();
                 }
 
-                boolean wasActive = isActive();
-                if (doConnect(remoteAddress, localAddress)) {
+                boolean wasActive = isActive();//open and connect =true.//1 是否激活
+                if (doConnect(remoteAddress, localAddress)) {//2调用NIO 底层的方法
                     fulfillConnectPromise(promise, wasActive);
                 } else {
                     connectPromise = promise;
                     requestedRemoteAddress = remoteAddress;
 
                     // Schedule connect timeout.
-                    int connectTimeoutMillis = config().getConnectTimeoutMillis();
+                    int connectTimeoutMillis = config().getConnectTimeoutMillis();//3
                     if (connectTimeoutMillis > 0) {
                         connectTimeoutFuture = eventLoop().schedule(new Runnable() {
                             @Override
@@ -285,7 +285,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 closeIfClosed();
             }
         }
-
+        //通道建立触发通道事件
         private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
             if (promise == null) {
                 // Closed via cancellation and the promise has been notified already.
@@ -302,7 +302,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
             // because what happened is what happened.
             if (!wasActive && active) {
-                pipeline().fireChannelActive();
+                pipeline().fireChannelActive();//
             }
 
             // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
@@ -376,7 +376,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected void doRegister() throws Exception {
         boolean selected = false;
         for (;;) {
-            try {
+            try {//代码进入到Nio层面的注册
                 selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);
                 return;
             } catch (CancelledKeyException e) {

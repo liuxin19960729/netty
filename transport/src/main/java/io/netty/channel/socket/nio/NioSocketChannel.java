@@ -310,18 +310,19 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             SocketUtils.bind(javaChannel().socket(), localAddress);
         }
     }
-
+    //NioSocketChannel
     @Override
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (localAddress != null) {
-            doBind0(localAddress);
+            doBind0(localAddress);//1 default 随机端口  也可以吸纳显示指定绑定的端口
         }
 
         boolean success = false;
         try {
+            //2该方法不会阻塞 返回 false 表示 正在连接
             boolean connected = SocketUtils.connect(javaChannel(), remoteAddress);
-            if (!connected) {
-                selectionKey().interestOps(SelectionKey.OP_CONNECT);
+            if (!connected) {//没有连接成功注册连接事件到Selector上面
+                selectionKey().interestOps(SelectionKey.OP_CONNECT);//3注册OP_CONNECT 事件 连接成功接受到对应的事件
             }
             success = true;
             return connected;
@@ -334,7 +335,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     protected void doFinishConnect() throws Exception {
-        if (!javaChannel().finishConnect()) {
+        //完成connecte过程
+        if (!javaChannel().finishConnect()) {//nio(飞阻塞模式) 没有完成连接 false 完成连接 true
             throw new Error();
         }
     }
