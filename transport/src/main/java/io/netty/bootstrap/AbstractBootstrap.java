@@ -104,6 +104,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * The {@link Class} which is used to create {@link Channel} instances from.
      * You either use this or {@link #channelFactory(io.netty.channel.ChannelFactory)} if your
      * {@link Channel} implementation has no no-args constructor.
+     *
+     * 反射 getConstruct()  使用午餐无参构造一个object
      */
     public B channel(Class<? extends C> channelClass) {
         return channelFactory(new ReflectiveChannelFactory<C>(
@@ -303,12 +305,12 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             return promise;
         }
     }
-
+    //在连接之前先将事件注册到选择器上
     final ChannelFuture initAndRegister() {
         Channel channel = null;
         try {
             channel = channelFactory.newChannel();
-            init(channel);
+            init(channel);//1
         } catch (Throwable t) {
             if (channel != null) {
                 // channel can be null if newChannel crashed (eg SocketException("too many open files"))
@@ -320,7 +322,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             return new DefaultChannelPromise(new FailedChannel(), GlobalEventExecutor.INSTANCE).setFailure(t);
         }
 
-        ChannelFuture regFuture = config().group().register(channel);
+        ChannelFuture regFuture = config().group().register(channel);//2将事件注册到事件轮询器中
         if (regFuture.cause() != null) {
             if (channel.isRegistered()) {
                 channel.close();

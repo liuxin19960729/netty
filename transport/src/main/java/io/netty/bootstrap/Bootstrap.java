@@ -56,7 +56,8 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
             (AddressResolverGroup<SocketAddress>) DEFAULT_RESOLVER;
     private volatile SocketAddress remoteAddress;
 
-    public Bootstrap() { }
+    public Bootstrap() {
+    }
 
     private Bootstrap(Bootstrap bootstrap) {
         super(bootstrap);
@@ -69,7 +70,6 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      *
      * @param resolver the {@link NameResolver} for this {@code Bootstrap}; may be {@code null}, in which case a default
      *                 resolver will be used
-     *
      * @see io.netty.resolver.DefaultAddressResolverGroup
      */
     @SuppressWarnings("unchecked")
@@ -152,16 +152,16 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      * @see #connect()
      */
     private ChannelFuture doResolveAndConnect(final SocketAddress remoteAddress, final SocketAddress localAddress) {
-        final ChannelFuture regFuture = initAndRegister();
+        final ChannelFuture regFuture = initAndRegister();//1  初始化 并且注册到事件选择器(这里会将通道注册到事件选择器)
         final Channel channel = regFuture.channel();
 
-        if (regFuture.isDone()) {
-            if (!regFuture.isSuccess()) {
+        if (regFuture.isDone()) {//2
+            if (!regFuture.isSuccess()) {//完成未成功立即返回
                 return regFuture;
             }
             return doResolveAndConnect0(channel, remoteAddress, localAddress, channel.newPromise());
         } else {
-            // Registration future is almost always fulfilled already, but just in case it's not.
+            // Registration future is almost always fulfilled already(几乎已经注册完), but just in case it's not.(以防万一)
             final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel);
             regFuture.addListener(new ChannelFutureListener() {
                 @Override
@@ -255,7 +255,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
             }
         });
     }
-
+    //通道初始化
     @Override
     void init(Channel channel) {
         ChannelPipeline p = channel.pipeline();
