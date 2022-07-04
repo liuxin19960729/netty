@@ -257,7 +257,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline.bind(localAddress, promise);
+        return pipeline.bind(localAddress, promise);//根据piple的传播机制-->HeadContext.bind-->unSafe.bind
     }
 
     @Override
@@ -561,7 +561,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             boolean wasActive = isActive();
             try {
-                doBind(localAddress);
+                doBind(localAddress);//调用底层nio bind逻辑
             } catch (Throwable t) {
                 safeSetFailure(promise, t);
                 closeIfClosed();
@@ -905,15 +905,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
-            if (outboundBuffer == null || outboundBuffer.isEmpty()) {
+            final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;//写入队列
+            if (outboundBuffer == null || outboundBuffer.isEmpty()) {//null or empty return
                 return;
             }
 
             inFlush0 = true;
 
             // Mark all pending write requests as failure if the channel is inactive.
-            if (!isActive()) {
+            if (!isActive()) {//2 未是激活状态不会将数据写入到缓冲区
                 try {
                     // Check if we need to generate the exception at all.
                     if (!outboundBuffer.isEmpty()) {
@@ -931,7 +931,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             try {
-                doWrite(outboundBuffer);
+                doWrite(outboundBuffer);//3 将数据写入到通道
             } catch (Throwable t) {
                 handleWriteError(t);
             } finally {

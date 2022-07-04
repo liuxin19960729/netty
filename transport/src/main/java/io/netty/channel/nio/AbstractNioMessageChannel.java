@@ -76,7 +76,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             try {
                 try {
                     do {
-                        int localRead = doReadMessages(readBuf);
+                        int localRead = doReadMessages(readBuf);//readBuf
                         if (localRead == 0) {
                             break;
                         }

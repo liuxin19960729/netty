@@ -108,7 +108,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             }
         }
 
-        chooser = chooserFactory.newChooser(children);
+        chooser = chooserFactory.newChooser(children);//传进一个EventLoop 选择器
 
         final FutureListener<Object> terminationListener = new FutureListener<Object>() {
             @Override

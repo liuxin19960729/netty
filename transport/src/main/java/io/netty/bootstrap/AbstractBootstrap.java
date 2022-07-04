@@ -271,23 +271,23 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     private ChannelFuture doBind(final SocketAddress localAddress) {
-        final ChannelFuture regFuture = initAndRegister();
+        final ChannelFuture regFuture = initAndRegister();//1 完成底层网络初始化和通道注册
         final Channel channel = regFuture.channel();
         if (regFuture.cause() != null) {
             return regFuture;
         }
 
-        if (regFuture.isDone()) {
+        if (regFuture.isDone()) {//初始化和注册完成
             // At this point we know that the registration was complete and successful.
             ChannelPromise promise = channel.newPromise();
-            doBind0(regFuture, channel, localAddress, promise);
+            doBind0(regFuture, channel, localAddress, promise);//2注册和初始化完全实现端口绑定
             return promise;
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
             final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel);
             regFuture.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) throws Exception {//添加监听器 初始化完成调用回到方法
                     Throwable cause = future.cause();
                     if (cause != null) {
                         // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
@@ -310,7 +310,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         Channel channel = null;
         try {
             channel = channelFactory.newChannel();
-            init(channel);//1
+            init(channel);//1 SocketChannel 和  ServerSocketChannel 分别调用各自的实现方法
         } catch (Throwable t) {
             if (channel != null) {
                 // channel can be null if newChannel crashed (eg SocketException("too many open files"))
@@ -324,10 +324,10 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
         ChannelFuture regFuture = config().group().register(channel);//2将事件注册到事件轮询器中
         if (regFuture.cause() != null) {
-            if (channel.isRegistered()) {
-                channel.close();
+            if (channel.isRegistered()) {//通道已经注册 并且发生错误
+                channel.close();//关闭通道调用close()回收相关资源
             } else {
-                channel.unsafe().closeForcibly();
+                channel.unsafe().closeForcibly();//强制清除通道占用资源
             }
         }
 
@@ -343,7 +343,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         return regFuture;
     }
 
-    abstract void init(Channel channel) throws Exception;
+    abstract void init(Channel channel) throws Exception;// 调用的是实现类的实现方法
 
     private static void doBind0(
             final ChannelFuture regFuture, final Channel channel,

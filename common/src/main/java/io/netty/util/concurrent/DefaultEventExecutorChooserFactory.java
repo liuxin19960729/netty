@@ -38,7 +38,7 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
             return new GenericEventExecutorChooser(executors);
         }
     }
-
+    //判断是不是2 的幂  2  和 -2  （0000 0010 & 1111 1110 = 0000 0010）
     private static boolean isPowerOfTwo(int val) {
         return (val & -val) == val;
     }
@@ -52,7 +52,7 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
         }
 
         @Override
-        public EventExecutor next() {
+        public EventExecutor next() {//(2^x-1)    0...11111 (全为1)  有一个作用 increment+1 * 0....1 自带求余数操作
             return executors[idx.getAndIncrement() & executors.length - 1];
         }
     }

@@ -210,7 +210,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe {
-
+        // 取消读操作选项 key有效 返回 取消操作
         protected final void removeReadOp() {
             SelectionKey key = selectionKey();
             // Check first if the key is still valid as it may be canceled as part of the deregistration
@@ -222,7 +222,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             int interestOps = key.interestOps();
             if ((interestOps & readInterestOp) != 0) {
                 // only remove readInterestOp if needed
-                key.interestOps(interestOps & ~readInterestOp);
+                key.interestOps(interestOps & ~readInterestOp);//移除读事件
             }
         }
 

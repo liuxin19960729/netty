@@ -40,7 +40,6 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * {@link Bootstrap} sub-class which allows easy bootstrap of {@link ServerChannel}
- *
  */
 public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerChannel> {
 
@@ -54,7 +53,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     private volatile EventLoopGroup childGroup;
     private volatile ChannelHandler childHandler;
 
-    public ServerBootstrap() { }
+    public ServerBootstrap() {
+    }
 
     private ServerBootstrap(ServerBootstrap bootstrap) {
         super(bootstrap);
@@ -129,6 +129,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     @Override
     void init(Channel channel) {
+        //先将option 和 attribute 设置到通道中
         setChannelOptions(channel, newOptionsArray(), logger);
         setAttributes(channel, newAttributesArray());
 
@@ -143,11 +144,11 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             @Override
             public void initChannel(final Channel ch) {
                 final ChannelPipeline pipeline = ch.pipeline();
-                ChannelHandler handler = config.handler();
+                ChannelHandler handler = config.handler();//将handle方法设置事件点
                 if (handler != null) {
                     pipeline.addLast(handler);
                 }
-
+                //将ServerBootstrapAcceptor 添加到NioServerSocketChannel 的pipeline 里面
                 ch.eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
@@ -171,11 +172,11 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         }
         return this;
     }
-
+    /*静态子类*/
     private static class ServerBootstrapAcceptor extends ChannelInboundHandlerAdapter {
 
-        private final EventLoopGroup childGroup;
-        private final ChannelHandler childHandler;
+        private final EventLoopGroup childGroup;//ServerBootstrap 设置Reactor从线程组
+        private final ChannelHandler childHandler;//用户定义的事件处理器
         private final Entry<ChannelOption<?>, Object>[] childOptions;
         private final Entry<AttributeKey<?>, Object>[] childAttrs;
         private final Runnable enableAutoReadTask;
@@ -204,15 +205,16 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         @Override
         @SuppressWarnings("unchecked")
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            //1 OP_ACCEPT 事件触发 ServerSocketChannel.accept() 会返回一个NioSocketChannel(读写操作的载体) 负责读写
             final Channel child = (Channel) msg;
 
-            child.pipeline().addLast(childHandler);
+            child.pipeline().addLast(childHandler);//2 将ChildHandle绑定到NioSocketChannel
 
-            setChannelOptions(child, childOptions, logger);
-            setAttributes(child, childAttrs);
+            setChannelOptions(child, childOptions, logger);//3
+            setAttributes(child, childAttrs);//3
 
             try {
-                childGroup.register(child).addListener(new ChannelFutureListener() {
+                childGroup.register(child).addListener(new ChannelFutureListener() {//将child注册的EventLoop上
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (!future.isSuccess()) {

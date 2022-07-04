@@ -1327,7 +1327,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public void handlerRemoved(ChannelHandlerContext ctx) {
             // NOOP
         }
-
+        //绑定端口
         @Override
         public void bind(
                 ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {

@@ -141,34 +141,40 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
             final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
-            allocHandle.reset(config);
+            /*
+            *在通道的读处理过程中最多读取的次数  避免缓冲区里面有太多的缓冲数据,影响其他通道数据的
+            *在通道的读处理过程中最多读取的次数  避免缓冲区里面有太多的缓冲数据,影响其他通道数据的读，
+            *   在一个事件选择器中 多个通道的读事串行化的
+            * */
+            allocHandle.reset(config);//最大读取次数等设置  缓冲区分配策略
 
             ByteBuf byteBuf = null;
             boolean close = false;
             try {
                 do {
-                    byteBuf = allocHandle.allocate(allocator);
-                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
-                    if (allocHandle.lastBytesRead() <= 0) {
+                    byteBuf = allocHandle.allocate(allocator);//1 分配一个buffer(接收缓冲区)
+                    allocHandle.lastBytesRead(doReadBytes(byteBuf));//2,3(NioSocketChannel来实现)
+                    if (allocHandle.lastBytesRead() <= 0) {//4 表示通道关闭 需要做出像对应的处理 关闭通道
                         // nothing was read. release the buffer.
                         byteBuf.release();
                         byteBuf = null;
-                        close = allocHandle.lastBytesRead() < 0;
+                        close = allocHandle.lastBytesRead() < 0;//EOF 读取完毕 没有什么可读
                         if (close) {
                             // There is nothing left to read as we received an EOF.
                             readPending = false;
                         }
+                        // ==0 表示当前缓冲区数据已经读取完毕 等待下一次来继续读
                         break;
                     }
 
                     allocHandle.incMessagesRead(1);
                     readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
+                    pipeline.fireChannelRead(byteBuf);//5 向通道传输channelRead() 事件
                     byteBuf = null;
-                } while (allocHandle.continueReading());
+                } while (allocHandle.continueReading());//判断是否继续读(是否)
 
                 allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
+                pipeline.fireChannelReadComplete();//触发读取完毕的事件
 
                 if (close) {
                     closeOnRead(pipeline);
@@ -182,8 +188,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
                 //
                 // See https://github.com/netty/netty/issues/2254
+                //在每次读完之后移除读的事件 !readPending 没有将读挂起准备  也不是自动读
                 if (!readPending && !config.isAutoRead()) {
-                    removeReadOp();
+                    removeReadOp();//移除读事件
                 }
             }
         }
@@ -341,12 +348,12 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         // Check first if the key is still valid as it may be canceled as part of the deregistration
         // from the EventLoop
         // See https://github.com/netty/netty/issues/2104
-        if (!key.isValid()) {
+        if (!key.isValid()) {//检查key 是否无效
             return;
         }
         final int interestOps = key.interestOps();
         if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-            key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
+            key.interestOps(interestOps & ~SelectionKey.OP_WRITE);//取消OP_WRITE 操作
         }
     }
 }

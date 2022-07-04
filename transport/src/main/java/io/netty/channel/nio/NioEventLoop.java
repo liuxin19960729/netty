@@ -718,6 +718,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
             // to a spin loop
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
+                // SelectionKey.OP_READ  SocketChannel read()
+                // SelectionKey.OP_ACCEPT ServerSocketChannel accept()
                 unsafe.read();
             }
         } catch (CancelledKeyException ignored) {

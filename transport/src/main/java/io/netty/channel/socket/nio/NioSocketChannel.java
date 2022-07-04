@@ -356,6 +356,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     protected int doReadBytes(ByteBuf byteBuf) throws Exception {
         final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
         allocHandle.attemptedBytesRead(byteBuf.writableBytes());
+        //将指定的内容传输到缓冲区   并在通道接收指定接收数的数据
         return byteBuf.writeBytes(javaChannel(), allocHandle.attemptedBytesRead());
     }
 
@@ -383,14 +384,14 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             ((NioSocketChannelConfig) config).setMaxBytesPerGatheringWrite(attempted >>> 1);
         }
     }
-
+    //将数据写入到通道的实现
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         SocketChannel ch = javaChannel();
-        int writeSpinCount = config().getWriteSpinCount();
+        int writeSpinCount = config().getWriteSpinCount();//写操作旋转的次数
         do {
-            if (in.isEmpty()) {
-                // All written so clear OP_WRITE
+            if (in.isEmpty()) {//没有数据可写(buf empty)
+                // All written so clear OP_WRITE 取消注册在Selector OP_WROITE(因为缓冲区里面的数据全部都写完了 避免毫无意义的写事件就绪)
                 clearOpWrite();
                 // Directly return here so incompleteWrite(...) is not called.
                 return;
@@ -414,11 +415,12 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     // to check if the total size of all the buffers is non-zero.
                     ByteBuffer buffer = nioBuffers[0];
                     int attemptedBytes = buffer.remaining();
-                    final int localWrittenBytes = ch.write(buffer);
-                    if (localWrittenBytes <= 0) {
-                        incompleteWrite(true);
+                    final int localWrittenBytes = ch.write(buffer);//像通道写数据(底层SocketChannel写)
+                    if (localWrittenBytes <= 0) {//2 localWrittenBytes==0 表示没有写入 Socket缓冲区满了
+                        incompleteWrite(true);//注册写 下一次进行写入
                         return;
                     }
+                    // 数据过大 分多次写入 NioSocketChanenel 的write 次数默认16
                     adjustMaxBytesPerGatheringWrite(attemptedBytes, localWrittenBytes, maxBytesPerGatheringWrite);
                     in.removeBytes(localWrittenBytes);
                     --writeSpinCount;
